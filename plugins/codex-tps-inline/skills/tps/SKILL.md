@@ -12,11 +12,11 @@ python "<本技能目录>/../../scripts/control.py" inspect --thread "<当前对
 
 简短报告 `session.current.output_tokens`、`elapsed_seconds`、`average_tps` 与状态。查询本身会开始新一轮；查看上一任务结束后的均值用 `session.last_finished`。
 
-底部状态行由本机后台监控自动更新，无需每轮调用技能或模型。`launch` 首次打开使用独立渲染数据目录的 **Codex TPS 窗口**，之后复用该窗口；任务统计仍使用当前 `CODEX_HOME`。现有普通 Codex 进程不会阻止启用，不需要用户反复退出。开启后切换对话自动显示，技能用于查询和诊断。
+底部状态行由本机后台监控自动更新，无需每轮调用技能或模型。`launch` 使用 Codex 原生数据目录，已有 TPS 连接时只聚焦现有窗口，不再次激活应用。多个窗口中优先选择已打开目标对话的窗口；目标对话未打开时，用户在现有窗口切换对话即可。任务统计仍使用当前 `CODEX_HOME`。
 
 Windows 安装器建立桌面和用户开始菜单的 **Codex** 快捷方式，重新从该入口打开时自动启动 TPS。旧 Codex TPS 入口继续可用。原 Store 入口及旧任务栏图标不会自动加载；不要将快捷方式集成描述成拦截所有原生入口。macOS 从 `~/Applications/Codex TPS.app` 启动，可固定到 Dock。无需在每个对话调用本技能。
 
-检查 `monitor.fresh` 与当前 thread 对应的 diagnostics：只有 `stage=rendered` 且 `rendered>0` 才表示本对话已匹配到显示位置。`waiting_for_launcher` 表示还未连接到 TPS 窗口，应执行 `launch --thread`，不要再次要求用户完全退出。不要自动退出客户端或将“已安装”说成“已显示”。
+检查 `monitor.fresh` 与当前 thread 对应的 diagnostics：只有 `stage=rendered` 且 `rendered>0` 才表示本对话已匹配到显示位置。`waiting_for_launcher` 可执行一次 `launch --thread`。如果返回 `restart_required`，说明原生 Codex 已运行但没有 TPS 连接，不能运行中补上启动参数；应明确说明一次完整退出并通过启动器重开的必要性，不要循环尝试或另开专用目录。不要自动退出客户端或将“已安装”说成“已显示”。从 0.3.x 升级后旧的双实例需要用户正常退出一次，不能声称安装更新就已合并现有窗口。
 
 `launcher`（若存在）是上次启动入口的记录，不代表当前显示状态。Windows MSIX 必须使用 `activate.ps1` 的应用激活接口；不能直接执行包里的 `ChatGPT.exe`。启动异常保存在 `%LOCALAPPDATA%/CodexTPSInline/launcher.log` 和 `launch-result.json`，诊断时可读取这些文件。
 

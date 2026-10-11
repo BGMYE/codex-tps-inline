@@ -1,4 +1,4 @@
-"""Launch the normal Codex app with local TPS footer support on Windows."""
+"""Launch or reuse one native Codex instance with local TPS footer support."""
 
 import argparse
 import ctypes
@@ -101,7 +101,14 @@ def app_info():
         raise RuntimeError("未找到 /Applications 或 ~/Applications 中的 Codex.app / ChatGPT.app。")
     if sys.platform != "win32":
         raise RuntimeError("原生 TPS 窗口目前支持 Windows 和 macOS。")
-    script = "$p = Get-AppxPackage -Name 'OpenAI.Codex' | Sort-Object Version -Descending | Select-Object -First 1; if ($p) { $exe = Join-Path $p.InstallLocation 'app/ChatGPT.exe'; @{exe=$exe;aumid=($p.PackageFamilyName + '!App')} | ConvertTo-Json -Compress }"
+    script = """$p = Get-AppxPackage -Name 'OpenAI.Codex' | Sort-Object Version -Descending | Select-Object -First 1
+if ($p) {
+    $exe = Join-Path $p.InstallLocation 'app/ChatGPT.exe'
+    $running = @(Get-CimInstance Win32_Process -Filter "Name='ChatGPT.exe'" | Where-Object {
+        $_.ExecutablePath -eq $exe -and $_.CommandLine -notlike '*--type=*'
+    }).Count -gt 0
+    @{exe=$exe;aumid=($p.PackageFamilyName + '!App');running=$running} | ConvertTo-Json -Compress
+}"""
     result = subprocess.run([POWERSHELL, "-NoProfile", "-Command", script], capture_output=True, text=True, encoding="utf-8", timeout=20)
     if result.returncode or not result.stdout.strip():
         raise RuntimeError("未找到 Windows Codex 桌面安装包。")
@@ -122,15 +129,48 @@ def activate_app(aumid, flags):
 
 
 def activate_mac_app(bundle, flags, home):
-    command = ["/usr/bin/open", "-n", "-a", bundle,
-               "--env", f"CODEX_HOME={home}",
-               "--env", f"CODEX_ELECTRON_USER_DATA_PATH={STATE / 'codex-profile'}", "--args", *flags]
+    command = ["/usr/bin/open", "-a", bundle,
+               "--env", f"CODEX_HOME={home}", "--args", *flags]
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=20)
     if result.returncode:
         raise RuntimeError(result.stderr.strip() or "macOS Codex 启动失败。")
 
 
+def reuse_window(home, port, pages, thread_id=None):
+    start(home)
+    selected = pages[0]
+    if thread_id and len(pages) > 1:
+        overlay = Path(__file__).with_name("overlay.js").read_text(encoding="utf-8-sig")
+        for page in pages:
+            client = CDPClient(page["webSocketDebuggerUrl"])
+            try:
+                if client.evaluate(f"({overlay})(null)") == thread_id:
+                    selected = page
+                    break
+            finally:
+                client.close()
+    client = CDPClient(selected["webSocketDebuggerUrl"])
+    try:
+        client.call("Page.bringToFront")
+    finally:
+        client.close()
+    return {"stage": "connected", "port": port, "reused": True,
+            "message": "已复用现有 Codex 窗口；TPS 会跟随当前对话，不另开窗口。"}
+
+
+def restart_required():
+    return {"stage": "restart_required", "message": "Codex 已在运行，但本次启动没有启用 TPS 连接。请先完成当前工作并完整退出 Codex，再从桌面或开始菜单的新 Codex 快捷方式打开一次；不会另外创建一个 Codex。"}
+
+
 def launch_from_desktop(home, thread_id=None):
+    try:
+        port, pages = available_pages()
+    except CDPError:
+        pass
+    else:
+        return reuse_window(home, port, pages, thread_id)
+    if app_info().get("running"):
+        return restart_required()
     launcher = STATE / "launch.ps1"
     if not launcher.is_file():
         raise RuntimeError("请先运行 Windows install.ps1，建立桌面启动入口。")
@@ -167,18 +207,12 @@ def launch(home, thread_id=None):
         else:
             raise RuntimeError("没有可用的本机 TPS 连接端口。")
     else:
-        if sys.platform == "darwin" and not thread_id:
-            start(home)
-            client = CDPClient(_pages[0]["webSocketDebuggerUrl"])
-            try:
-                client.call("Page.bringToFront")
-            finally:
-                client.close()
-            return {"stage": "connected", "port": port, "message": "已复用 Codex TPS 窗口；TPS 监控已连接。"}
+        return reuse_window(home, port, _pages, thread_id)
     info = app_info()
+    if info.get("running"):
+        return restart_required()
     start(home)
-    flags = [f"--user-data-dir={STATE / 'codex-profile'}",
-             "--remote-debugging-address=127.0.0.1", f"--remote-debugging-port={port}"]
+    flags = ["--remote-debugging-address=127.0.0.1", f"--remote-debugging-port={port}"]
     if thread_id:
         flags.append(f"codex://threads/{quote(thread_id, safe='')}")
     app_pid = activate_mac_app(info["bundle"], flags, home) if sys.platform == "darwin" else activate_app(info["aumid"], flags)

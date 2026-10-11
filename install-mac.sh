@@ -21,7 +21,7 @@ fi
 "$tps_cli" plugin marketplace add "$tps_source" --json
 "$tps_cli" plugin add 'codex-tps-inline@local-tps-inline' --json
 tps_codex_home=${CODEX_HOME:-"$HOME/.codex"}
-tps_installed="$tps_codex_home/plugins/cache/local-tps-inline/codex-tps-inline/0.3.0/scripts"
+tps_installed="$tps_codex_home/plugins/cache/local-tps-inline/codex-tps-inline/0.4.0/scripts"
 "$tps_python" "$tps_installed/mac_launcher.py" install --home "$tps_codex_home"
 "$tps_python" "$tps_installed/control.py" restart --home "$tps_codex_home"
 echo '安装完成。将 ~/Applications/Codex TPS.app 拖到 Dock，以后从此图标打开 Codex，TPS 会自动启动并记住上次开关状态。原 Codex.app 入口不会被替换。'

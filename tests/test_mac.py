@@ -10,6 +10,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "plugins/codex-tps-inline/scripts"))
 import control
 import mac_launcher
+from cdp import CDPError
 
 
 class MacTests(unittest.TestCase):
@@ -36,14 +37,37 @@ class MacTests(unittest.TestCase):
             with patch.object(control.sys, "platform", "darwin"), patch.object(control, "MAC_APP_PATHS", (bundle,)):
                 self.assertEqual(control.app_info()["exe"], str(bundle / "Contents/MacOS/Codex"))
 
-    def test_open_receives_profile_and_existing_task_home_as_arguments(self):
+    def test_open_uses_the_existing_app_identity_and_preserves_codex_home(self):
         with patch.object(control.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run:
             control.activate_mac_app("/Applications/Codex.app", ["--remote-debugging-port=9222"], Path("task home"))
             command = run.call_args.args[0]
-            self.assertEqual(command[:4], ["/usr/bin/open", "-n", "-a", "/Applications/Codex.app"])
+            self.assertEqual(command[:3], ["/usr/bin/open", "-a", "/Applications/Codex.app"])
+            self.assertNotIn("-n", command)
             self.assertIn("CODEX_HOME=task home", command)
-            self.assertIn(f"CODEX_ELECTRON_USER_DATA_PATH={control.STATE / 'codex-profile'}", command)
+            self.assertFalse(any(arg.startswith("CODEX_ELECTRON_USER_DATA_PATH=") for arg in command))
             self.assertEqual(command[-2:], ["--args", "--remote-debugging-port=9222"])
+
+    def test_mac_cold_launch_passes_debugging_flags_without_a_separate_profile(self):
+        thread = "00000000-0000-4000-8000-000000000001"
+        with patch.object(control.sys, "platform", "darwin"), \
+             patch.object(control, "available_pages", side_effect=[CDPError("closed"), (9222, [{}])]), \
+             patch.object(control, "app_info", return_value={"running": False, "bundle": "/Applications/Codex.app"}), \
+             patch.object(control, "activate_mac_app") as activate, \
+             patch.object(control, "activate_app") as activate_windows, \
+             patch.object(control, "start") as start, patch.object(control.time, "sleep"):
+            result = control.launch(Path("task home"), thread)
+            self.assertEqual(result["stage"], "connected")
+            start.assert_called_once_with(Path("task home"))
+            activate.assert_called_once()
+            bundle, flags, home = activate.call_args.args
+            self.assertEqual(bundle, "/Applications/Codex.app")
+            self.assertEqual(home, Path("task home"))
+            self.assertEqual(len(flags), 3)
+            self.assertEqual(flags[0], "--remote-debugging-address=127.0.0.1")
+            self.assertIn(flags[1], [f"--remote-debugging-port={port}" for port in range(9222, 9232)])
+            self.assertEqual(flags[2], f"codex://threads/{thread}")
+            self.assertFalse(any(flag.startswith("--user-data-dir") for flag in flags))
+            activate_windows.assert_not_called()
 
     def test_mac_monitor_is_detached_from_the_calling_session(self):
         with tempfile.TemporaryDirectory() as directory, patch.object(control, "STATE", Path(directory)), \

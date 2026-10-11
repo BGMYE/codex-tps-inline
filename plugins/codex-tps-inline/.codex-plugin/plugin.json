@@ -1,6 +1,6 @@
 {
   "name": "codex-tps-inline",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Windows / macOS Codex 随启动入口加载的内嵌 TPS 开关与回复均值；每秒刷新，并标明计数延迟。",
   "skills": "./skills/",
   "interface": {

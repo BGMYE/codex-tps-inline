@@ -38,7 +38,7 @@ def create_launcher(application, python, control, state, icon=None, home=None):
     executable.chmod(0o755)
     metadata = {"CFBundleIdentifier": IDENTIFIER, "CFBundleExecutable": "launch",
                 "CFBundleName": "Codex TPS", "CFBundlePackageType": "APPL",
-                "CFBundleVersion": "0.3.0", "LSUIElement": True}
+                "CFBundleVersion": "0.4.0", "LSUIElement": True}
     if icon and Path(icon).is_file():
         resources = contents / "Resources"
         resources.mkdir(exist_ok=True)

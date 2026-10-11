@@ -15,7 +15,7 @@ if ($LASTEXITCODE -ne 0) {
     throw '插件安装失败。'
 }
 $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
-$installedControl = Join-Path $codexHome 'plugins/cache/local-tps-inline/codex-tps-inline/0.3.0/scripts/control.py'
+$installedControl = Join-Path $codexHome 'plugins/cache/local-tps-inline/codex-tps-inline/0.4.0/scripts/control.py'
 $runtimeDirectory = Join-Path $env:LOCALAPPDATA 'CodexTPSInline'
 New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
 $legacyAutorun = Join-Path $runtimeDirectory 'autorun.ps1'
