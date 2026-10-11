@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+node_modules/
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db
+validation/windows-live-footer.png

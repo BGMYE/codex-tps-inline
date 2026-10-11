@@ -1,0 +1,128 @@
+{
+  "port": 9222,
+  "original_enabled": true,
+  "checks": [
+    {
+      "viewport": {
+        "width": 1563,
+        "height": 1125
+      },
+      "toggle": {
+        "x": 1431.328125,
+        "y": 55.59375,
+        "width": 66.671875,
+        "height": 28.796875
+      },
+      "native": {
+        "x": 1519,
+        "y": 56,
+        "width": 28,
+        "height": 28
+      },
+      "sameToolbar": true,
+      "overlap": false,
+      "toggleHit": true,
+      "nativeHit": true,
+      "enabled": true,
+      "version": 8
+    },
+    {
+      "viewport": {
+        "width": 800,
+        "height": 720
+      },
+      "toggle": {
+        "x": 668.328125,
+        "y": 55.59375,
+        "width": 66.671875,
+        "height": 28.796875
+      },
+      "native": {
+        "x": 756,
+        "y": 56,
+        "width": 28,
+        "height": 28
+      },
+      "sameToolbar": true,
+      "overlap": false,
+      "toggleHit": true,
+      "nativeHit": true,
+      "enabled": true,
+      "version": 8
+    },
+    {
+      "viewport": {
+        "width": 620,
+        "height": 720
+      },
+      "toggle": {
+        "x": 488.328125,
+        "y": 55.59375,
+        "width": 66.671875,
+        "height": 28.796875
+      },
+      "native": {
+        "x": 576,
+        "y": 56,
+        "width": 28,
+        "height": 28
+      },
+      "sameToolbar": true,
+      "overlap": false,
+      "toggleHit": true,
+      "nativeHit": true,
+      "enabled": true,
+      "version": 8
+    },
+    {
+      "viewport": {
+        "width": 1563,
+        "height": 1125
+      },
+      "toggle": {
+        "x": 1431.328125,
+        "y": 55.59375,
+        "width": 66.671875,
+        "height": 28.796875
+      },
+      "native": {
+        "x": 1519,
+        "y": 56,
+        "width": 28,
+        "height": 28
+      },
+      "sameToolbar": true,
+      "overlap": false,
+      "toggleHit": true,
+      "nativeHit": true,
+      "enabled": true,
+      "version": 8,
+      "rows": 4
+    },
+    {
+      "viewport": {
+        "width": 1563,
+        "height": 1125
+      },
+      "toggle": {
+        "x": 1431.328125,
+        "y": 55.59375,
+        "width": 66.671875,
+        "height": 28.796875
+      },
+      "native": {
+        "x": 1519,
+        "y": 56,
+        "width": 28,
+        "height": 28
+      },
+      "sameToolbar": true,
+      "overlap": false,
+      "toggleHit": true,
+      "nativeHit": true,
+      "enabled": false,
+      "version": 8,
+      "rows": 0
+    }
+  ]
+}

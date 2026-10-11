@@ -1,0 +1,94 @@
+from pathlib import Path
+import plistlib
+import shlex
+import sys
+import tempfile
+from types import SimpleNamespace
+import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "plugins/codex-tps-inline/scripts"))
+import control
+import mac_launcher
+
+
+class MacTests(unittest.TestCase):
+    def test_reopening_the_finder_launcher_brings_existing_tps_page_to_front(self):
+        with patch.object(control.sys, "platform", "darwin"), \
+             patch.object(control, "available_pages", return_value=(9222, [{"webSocketDebuggerUrl": "ws://127.0.0.1:9222/devtools/page/tps"}])), \
+             patch.object(control, "CDPClient") as client, patch.object(control, "start") as start, \
+             patch.object(control, "activate_mac_app") as activate, patch.object(control, "app_info") as app_info:
+            result = control.launch(Path("task home"))
+            self.assertEqual(result["stage"], "connected")
+            start.assert_called_once_with(Path("task home"))
+            client.return_value.call.assert_called_once_with("Page.bringToFront")
+            client.return_value.close.assert_called_once()
+            activate.assert_not_called()
+            app_info.assert_not_called()
+
+    def test_bundle_metadata_finds_the_actual_executable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bundle = Path(directory) / "Codex.app"
+            (bundle / "Contents/MacOS").mkdir(parents=True)
+            (bundle / "Contents/MacOS/Codex").touch()
+            with (bundle / "Contents/Info.plist").open("wb") as stream:
+                plistlib.dump({"CFBundleExecutable":"Codex", "CFBundleIconFile":"Codex.icns"}, stream)
+            with patch.object(control.sys, "platform", "darwin"), patch.object(control, "MAC_APP_PATHS", (bundle,)):
+                self.assertEqual(control.app_info()["exe"], str(bundle / "Contents/MacOS/Codex"))
+
+    def test_open_receives_profile_and_existing_task_home_as_arguments(self):
+        with patch.object(control.subprocess, "run", return_value=SimpleNamespace(returncode=0)) as run:
+            control.activate_mac_app("/Applications/Codex.app", ["--remote-debugging-port=9222"], Path("task home"))
+            command = run.call_args.args[0]
+            self.assertEqual(command[:4], ["/usr/bin/open", "-n", "-a", "/Applications/Codex.app"])
+            self.assertIn("CODEX_HOME=task home", command)
+            self.assertIn(f"CODEX_ELECTRON_USER_DATA_PATH={control.STATE / 'codex-profile'}", command)
+            self.assertEqual(command[-2:], ["--args", "--remote-debugging-port=9222"])
+
+    def test_mac_monitor_is_detached_from_the_calling_session(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(control, "STATE", Path(directory)), \
+             patch.object(control.sys, "platform", "darwin"), patch.object(control, "monitor_alive", return_value=False), \
+             patch.object(control.subprocess, "Popen") as process, patch.object(control.subprocess, "run") as run:
+            self.assertEqual(control.start(Path(directory))["stage"], "starting")
+            self.assertTrue(process.call_args.kwargs["start_new_session"])
+            run.assert_not_called()
+
+    def test_mac_monitor_process_lookup_does_not_send_a_signal(self):
+        with patch.object(control.sys, "platform", "darwin"), patch.object(control, "status", return_value={"pid":12345}), \
+             patch.object(control.os, "kill", side_effect=ProcessLookupError) as kill:
+            self.assertFalse(control.monitor_alive())
+            kill.assert_called_once_with(12345, 0)
+
+    def test_finder_launcher_quotes_paths_and_refuses_other_apps(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            application = root / "Applications/Codex TPS.app"
+            python = root / "Python with spaces/python3"
+            script = root / "User's plugin/control.py"
+            mac_launcher.create_launcher(application, python, script, root / "state")
+            with (application / "Contents/Info.plist").open("rb") as stream:
+                self.assertEqual(plistlib.load(stream)["CFBundleIdentifier"], mac_launcher.IDENTIFIER)
+            command = (application / "Contents/MacOS/launch").read_text(encoding="utf-8").splitlines()[1]
+            self.assertEqual(shlex.split(command)[1:4], [str(python), str(script), "launch"])
+            mac_launcher.create_launcher(application, python, script, root / "state")
+            mac_launcher.remove_launcher(application)
+            self.assertFalse(application.exists())
+            (application / "Contents").mkdir(parents=True)
+            with (application / "Contents/Info.plist").open("wb") as stream:
+                plistlib.dump({"CFBundleIdentifier":"another.app"}, stream)
+            with self.assertRaises(RuntimeError): mac_launcher.create_launcher(application, python, script, root / "state")
+            with self.assertRaises(RuntimeError): mac_launcher.remove_launcher(application)
+
+    def test_finder_launcher_preserves_custom_codex_home_without_shell_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            application = root / "Applications/Codex TPS.app"
+            home = root / "Task home"
+            python = Path("/usr/local/bin/python3")
+            control_script = Path("/plugin/control.py")
+            mac_launcher.create_launcher(application, python, control_script, root / "state", home=home)
+            command = (application / "Contents/MacOS/launch").read_text(encoding="utf-8").splitlines()[1]
+            self.assertEqual(shlex.split(command)[1:6], [str(python), str(control_script), "launch", "--home", str(home)])
+
+
+if __name__ == "__main__": unittest.main()

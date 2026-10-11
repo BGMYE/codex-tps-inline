@@ -1,0 +1,12 @@
+The local CDP transport and exact-identity reply placement are adapted from:
+Mie-coder/codex-tps (MIT), https://github.com/Mie-coder/codex-tps
+
+The upstream transport and renderer selection originated in:
+KevinKE93/Codex-Monitor (MIT), https://github.com/KevinKE93/Codex-Monitor
+Reference commit: 56b2ea3602cf8395bdc9d0513a8088f8e38d657e
+Copyright (c) 2026 Kevin Ke. The original MIT license is retained in LICENSE.
+
+This adaptation adds per-second turn-average updates, an inline toggle, and
+Windows/macOS launch and process control. No app binaries, credentials, private
+transcripts or token usage logs are included. Cropped UI screenshots document
+the integration; no OpenAI application assets are redistributed separately.

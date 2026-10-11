@@ -1,0 +1,13 @@
+{
+  "name": "codex-tps-inline",
+  "version": "0.3.0",
+  "description": "Windows / macOS Codex 随启动入口加载的内嵌 TPS 开关与回复均值；每秒刷新，并标明计数延迟。",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex TPS Inline",
+    "shortDescription": "Codex 内嵌 TPS 开关、回复均值和 $tps 查询。",
+    "category": "Productivity",
+    "capabilities": ["Monitor"],
+    "defaultPrompt": ["查看当前对话的 TPS，并检查回复底部状态行。"]
+  }
+}
